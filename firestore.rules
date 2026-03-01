@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isNeuEmail() {
+      return isSignedIn() && request.auth.token.email.matches('.*@neu\\.edu\\.ph$');
+    }
+
+    function getUserPrivilege() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.privilege;
+    }
+
+    function isAdmin() {
+      return isNeuEmail() && getUserPrivilege() in ['highest', 'higher', 'high'];
+    }
+
+    function isSuperAdmin() {
+      return isNeuEmail() && getUserPrivilege() == 'highest';
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile; admins can read all
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Only the system (via Cloud Functions) or the user themselves can create
+      // their own profile on first sign-in
+      allow create: if isOwner(userId) && isNeuEmail();
+
+      // Users can update select fields; admins can update anything
+      allow update: if (isOwner(userId) && isNeuEmail()
+                        && !('privilege' in request.resource.data.diff(resource.data).affectedKeys())
+                        && !('isDisabled' in request.resource.data.diff(resource.data).affectedKeys()))
+                    || isAdmin();
+
+      // Only highest privilege can delete
+      allow delete: if isSuperAdmin();
+    }
+
+    // Visitor logs collection
+    match /visitor_logs/{logId} {
+      // Users can read their own logs; admins can read all
+      allow read: if isNeuEmail() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Any authenticated NEU user can create a log for themselves
+      allow create: if isNeuEmail()
+                    && request.resource.data.userId == request.auth.uid
+                    && !get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isDisabled;
+
+      // Users can update their own log (e.g., check-out time); admins can update any
+      allow update: if isNeuEmail()
+                    && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can delete logs
+      allow delete: if isAdmin();
+    }
+  }
+}
