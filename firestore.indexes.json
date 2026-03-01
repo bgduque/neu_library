@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "visitor_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "checkOutTime", "order": "ASCENDING" },
+        { "fieldPath": "checkInTime", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visitor_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "checkInTime", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "visitor_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "checkInTime", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
